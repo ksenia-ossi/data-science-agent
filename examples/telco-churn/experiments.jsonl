@@ -1,0 +1,6 @@
+{"name": "dummy", "model": "DummyClassifier prior", "features": "", "params": {}, "metrics": {"roc_auc": 0.5, "pr_auc": 0.265}, "notes": ""}
+{"name": "logreg", "model": "LogisticRegression, one-hot + scaled numerics", "features": "", "params": {}, "metrics": {"roc_auc": 0.8462, "pr_auc": 0.6617, "cv_std": 0.0126}, "notes": ""}
+{"name": "logreg_fe", "model": "LogReg + engineered features", "features": "", "params": {}, "metrics": {"roc_auc": 0.8457, "pr_auc": 0.6595}, "notes": ""}
+{"name": "lgbm", "model": "LightGBM default-ish", "features": "", "params": {}, "metrics": {"roc_auc": 0.8437, "pr_auc": 0.6556}, "notes": ""}
+{"name": "rf", "model": "RandomForest 500", "features": "", "params": {}, "metrics": {"roc_auc": 0.8451, "pr_auc": 0.6579}, "notes": ""}
+{"name": "lgbm_tuned", "model": "LightGBM Optuna 30 trials", "features": "", "params": {"n_estimators": 539, "learning_rate": 0.0143, "num_leaves": 5, "min_child_samples": 89, "reg_lambda": 17.06, "colsample_bytree": 0.967}, "metrics": {"roc_auc": 0.8499, "pr_auc": 0.6693, "cv_std": 0.0118}, "notes": ""}

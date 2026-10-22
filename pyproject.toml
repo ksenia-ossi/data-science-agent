@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ds-agent"
+version = "0.1.0"
+description = "An LLM agent that works through a data science task end to end: EDA, cleaning, features, models, evaluation, report."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "anthropic>=0.40",
+    "jupyter_client>=7",
+    "ipykernel>=6",
+    "nbformat>=5",
+    "pandas>=2",
+    "numpy",
+    "scikit-learn>=1.3",
+    "lightgbm>=4",
+    "matplotlib>=3.7",
+    "seaborn",
+    "optuna>=3",
+    "joblib",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "ruff"]
+
+[project.scripts]
+ds-agent = "ds_agent.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["ds_agent*"]
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["examples/*/analysis.ipynb"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "BLE"]
