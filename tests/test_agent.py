@@ -1,4 +1,5 @@
 import copy
+import json
 from types import SimpleNamespace
 
 from ds_agent.agent import OMITTED_IMAGE, Agent
@@ -90,3 +91,22 @@ def test_old_images_are_pruned_and_cache_marker_moves(toolbox):
     assert any(c.get("text") == OMITTED_IMAGE for c in results[0]["content"])
     markers = [b for m in messages for b in m["content"] if "cache_control" in b]
     assert len(markers) == 1
+
+
+def test_agent_logs_latency_and_tokens_per_call(toolbox, tmp_path):
+    log = tmp_path / "llm_calls.jsonl"
+    agent, _ = make_agent(
+        toolbox,
+        [
+            [tool_use("t1", "run_python", {"purpose": "x", "code": "x = 1"})],
+            [tool_use("t2", "finish", {"report": "# Done"})],
+        ],
+        call_log=log,
+    )
+    result = agent.run("do it")
+    rows = [json.loads(line) for line in log.read_text().splitlines()]
+    assert [r["step"] for r in rows] == [1, 2]
+    assert all(r["input_tokens"] == 10 and r["output_tokens"] == 5 for r in rows)
+    assert all(r["latency_s"] >= 0 for r in rows)
+    assert result.usage.calls == 2
+    assert result.usage.max_latency_s >= result.usage.mean_latency_s

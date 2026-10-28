@@ -18,6 +18,7 @@ task + data ──> Claude ──> tool call ──> Python kernel / files ─�
 - **Workflow in the system prompt** ([`ds_agent/prompts.py`](ds_agent/prompts.py)): split before any analysis, EDA on training data only, baseline first, preprocessing inside sklearn Pipelines, cross-validation for model choice, a single evaluation on the test set, leakage checks, fixed seeds.
 - **Checkpoints:** after EDA and after the baseline, the agent shows a summary and asks whether to continue or change direction. `--auto` skips the questions.
 - **Experiment log:** every model is recorded with its metrics in `outputs/experiments.jsonl`, and the agent sees the leaderboard after each entry.
+- **Latency and token log:** every model call is recorded in `outputs/llm_calls.jsonl` with its response time and token counts (input, output, cache read, cache write), and the run ends with a summary of mean and max latency, so slow or expensive runs are easy to spot.
 - **Memory:** reusable lessons (for example "TotalCharges has blank strings") are appended to a Markdown file and included in the prompt of the next run.
 - **Context control:** older figures are dropped from the conversation and prompt caching is used, so long runs stay cheap.
 
@@ -57,6 +58,7 @@ runs/<timestamp>/
     report.md            final report
     analysis.ipynb       every step as a notebook cell, with outputs
     experiments.jsonl    all models and metrics
+    llm_calls.jsonl      latency and tokens of each model call
     model.joblib         final fitted pipeline
     figures/             plots
 ```
