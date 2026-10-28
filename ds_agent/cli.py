@@ -94,13 +94,17 @@ def main(argv: list[str] | None = None) -> int:
             build_system_prompt(memory),
             max_steps=args.max_steps,
             on_event=print_event,
+            call_log=workdir / "outputs" / "llm_calls.jsonl",
         )
         result = agent.run(build_task(args.task, files, args.target))
 
     u = result.usage
     print(
         f"\nSteps: {result.steps}. Tokens: input {u.input_tokens:,}, output {u.output_tokens:,}, "
-        f"cache read {u.cache_read_tokens:,}, cache write {u.cache_write_tokens:,}."
+        f"cache read {u.cache_read_tokens:,}, cache write {u.cache_write_tokens:,}.\n"
+        f"Model calls: {u.calls}, latency mean {u.mean_latency_s:.1f} s, "
+        f"max {u.max_latency_s:.1f} s, total {u.latency_s:.0f} s "
+        f"(per call: outputs/llm_calls.jsonl)."
     )
     print(f"Leaderboard:\n{toolbox.leaderboard()}\n")
     if result.finished:

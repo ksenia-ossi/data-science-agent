@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from .tools import TOOL_SPECS, Toolbox, text_block
 
@@ -17,12 +20,30 @@ class Usage:
     output_tokens: int = 0
     cache_read_tokens: int = 0
     cache_write_tokens: int = 0
+    calls: int = 0
+    latency_s: float = 0.0
+    max_latency_s: float = 0.0
 
-    def add(self, usage) -> None:
-        self.input_tokens += getattr(usage, "input_tokens", 0) or 0
-        self.output_tokens += getattr(usage, "output_tokens", 0) or 0
-        self.cache_read_tokens += getattr(usage, "cache_read_input_tokens", 0) or 0
-        self.cache_write_tokens += getattr(usage, "cache_creation_input_tokens", 0) or 0
+    def add(self, usage, latency_s: float = 0.0) -> dict:
+        call = {
+            "input_tokens": getattr(usage, "input_tokens", 0) or 0,
+            "output_tokens": getattr(usage, "output_tokens", 0) or 0,
+            "cache_read_tokens": getattr(usage, "cache_read_input_tokens", 0) or 0,
+            "cache_write_tokens": getattr(usage, "cache_creation_input_tokens", 0) or 0,
+            "latency_s": round(latency_s, 3),
+        }
+        self.input_tokens += call["input_tokens"]
+        self.output_tokens += call["output_tokens"]
+        self.cache_read_tokens += call["cache_read_tokens"]
+        self.cache_write_tokens += call["cache_write_tokens"]
+        self.calls += 1
+        self.latency_s += latency_s
+        self.max_latency_s = max(self.max_latency_s, latency_s)
+        return call
+
+    @property
+    def mean_latency_s(self) -> float:
+        return self.latency_s / self.calls if self.calls else 0.0
 
 
 @dataclass
@@ -54,6 +75,7 @@ class Agent:
         max_tokens: int = 8000,
         keep_images: int = 2,
         on_event: Callable[[str, str], None] | None = None,
+        call_log: Path | None = None,
     ):
         self.client = client
         self.model = model
@@ -63,6 +85,7 @@ class Agent:
         self.max_tokens = max_tokens
         self.keep_images = keep_images
         self.on_event = on_event or (lambda kind, text: None)
+        self.call_log = call_log
         self.messages: list[dict] = []
         self.usage = Usage()
         self.tools = [dict(t) for t in TOOL_SPECS]
@@ -75,6 +98,7 @@ class Agent:
         while step < self.max_steps and not self.toolbox.finished:
             step += 1
             self._prepare_context()
+            started = time.perf_counter()
             response = self.client.messages.create(
                 model=self.model,
                 max_tokens=self.max_tokens,
@@ -88,7 +112,8 @@ class Agent:
                 tools=self.tools,
                 messages=self.messages,
             )
-            self.usage.add(response.usage)
+            call = self.usage.add(response.usage, time.perf_counter() - started)
+            self._log_call(step, call)
             content = [_block_to_dict(b) for b in response.content]
             self.messages.append({"role": "assistant", "content": content})
 
@@ -134,6 +159,14 @@ class Agent:
             self.messages.append({"role": "user", "content": results})
 
         return RunResult(self.toolbox.finished, step, self.toolbox.report, self.usage)
+
+    def _log_call(self, step: int, call: dict) -> None:
+        """Append one line per model call: latency and token counts, for cost and speed checks."""
+        if self.call_log is None:
+            return
+        self.call_log.parent.mkdir(parents=True, exist_ok=True)
+        with self.call_log.open("a", encoding="utf-8") as f:
+            f.write(json.dumps({"step": step, "model": self.model, **call}) + "\n")
 
     def _prepare_context(self) -> None:
         """Drop old figures from the context and move the prompt-cache marker to the last block."""
